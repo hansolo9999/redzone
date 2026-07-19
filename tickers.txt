@@ -1,0 +1,19 @@
+BTC-USD | Bitcoin
+ETH-USD | Ethereum
+SOL-USD | Solana
+XRP-USD | XRP
+DOGE-USD | Dogecoin
+AAPL | Apple
+MSFT | Microsoft
+NVDA | Nvidia
+TSLA | Tesla
+INTC | Intel
+PYPL | PayPal
+DIS | Disney
+SPY | S&P 500
+QQQ | Nasdaq 100
+005930.KS | Samsung
+000660.KS | SK Hynix
+000270.KS | Kia
+035420.KS | Naver
+035720.KS | Kakao
