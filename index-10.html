@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0E14">
+<title>ЖАР · KuCoin</title>
+<style>
+:root{
+  --ink:#0B0E14; --panel:#141924; --panel2:#1A2130; --line:#242D3D;
+  --text:#E6EAF2; --dim:#7C8798;
+  --cold:#3B82C4; --warm:#F2A33C; --hot:#FF5B2E; --blaze:#FFD9C2;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--ink);color:var(--text)}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:0 0 40px}
+.num{font-family:ui-monospace,"SF Mono","Roboto Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+header{position:sticky;top:0;z-index:20;background:rgba(11,14,20,.95);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:13px 14px 9px}
+.brand{display:flex;align-items:baseline;gap:9px}
+.brand h1{margin:0;font-size:24px;letter-spacing:.22em;font-weight:800;
+  background:linear-gradient(92deg,var(--warm),var(--hot) 60%,var(--blaze));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.brand span{font-size:11px;color:var(--dim);letter-spacing:.08em}
+.status{margin-top:6px;font-size:11px;color:var(--dim);display:flex;justify-content:space-between;gap:8px}
+.status b{color:var(--text);font-weight:600}
+.warm{margin-top:7px;height:3px;background:#1E2534;border-radius:2px;overflow:hidden}
+.warm i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--warm),var(--hot));transition:width .5s}
+
+.row{display:flex;gap:6px;overflow-x:auto;padding:10px 14px 0;scrollbar-width:none}
+.row::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:9px 14px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--dim);font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.chip[aria-pressed="true"]{background:var(--hot);border-color:var(--hot);color:#12060A}
+.chip.alt[aria-pressed="true"]{background:var(--panel2);border-color:var(--warm);color:var(--warm)}
+.lbl{padding:12px 14px 2px;font-size:10px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+.ghost{padding:6px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+  color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+
+.list{padding:8px 12px}
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:12px 13px;margin-bottom:8px;overflow:hidden;cursor:pointer}
+.card.flash{animation:flash 1.4s ease-out}
+@keyframes flash{0%{background:#2A1810;border-color:var(--hot)}100%{background:var(--panel);border-color:var(--line)}}
+.top{display:flex;align-items:center;gap:9px}
+.tick{font-size:16px;font-weight:800;letter-spacing:.03em}
+.pin{color:var(--warm);font-size:11px}
+.price{margin-left:auto;font-size:14px;font-weight:700}
+.mid{display:flex;gap:15px;margin-top:9px;align-items:flex-end}
+.tf .k{font-size:9px;color:var(--dim);letter-spacing:.1em}
+.tf .v{font-size:15px;font-weight:700;line-height:1.2}
+.meta{margin-left:auto;text-align:right;font-size:10px;color:var(--dim);line-height:1.5}
+.badge{position:absolute;top:0;right:0;padding:3px 9px;font-size:9px;font-weight:800;
+  letter-spacing:.12em;background:var(--hot);color:#12060A;border-radius:0 13px 0 10px}
+.plan{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line);font-size:12px;line-height:1.85}
+.plan .g{display:flex;justify-content:space-between}
+.plan .g span:last-child{font-weight:700}
+.back{margin-top:7px;font-size:11px;line-height:1.5;display:flex;gap:7px;align-items:flex-start;color:#8FA3C0}
+.back .dot{background:#8FA3C0}
+.back b{font-weight:700}
+.risk{margin-top:9px;font-size:11px;line-height:1.5;display:flex;gap:7px;align-items:flex-start}
+.dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;margin-top:4px}
+.risk b{font-weight:700}
+.hint{font-size:10px;color:var(--dim);margin-top:7px;line-height:1.5}
+.empty{padding:46px 24px;text-align:center;color:var(--dim);font-size:13px;line-height:1.8}
+.warnbar{margin:10px 12px 8px;padding:11px 13px;border:1px solid #4A2318;background:#1E1210;
+  border-radius:12px;font-size:11.5px;line-height:1.6;color:#F2A33C}
+.err{margin:12px;padding:12px;border:1px solid #4A2318;background:#1E1210;border-radius:12px;
+  font-size:12px;color:#F2A33C;line-height:1.6}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><h1>ЖАР</h1><span>живая лента KuCoin</span></div>
+  <div class="status"><span id="stat">подключаюсь…</span><button class="ghost" id="soundBtn">🔔 вкл</button></div>
+  <div class="warm"><i id="warmBar"></i></div>
+</header>
+
+<div class="lbl">Сортировка</div>
+<div class="row" id="sortRow">
+  <button class="chip" data-sort="d5" aria-pressed="true">Δ 5 мин</button>
+  <button class="chip" data-sort="d15">Δ 15 мин</button>
+  <button class="chip" data-sort="d60">Δ 1 час</button>
+  <button class="chip" data-sort="d24">24 часа</button>
+  <button class="chip" data-sort="vol">Оборот</button>
+  <button class="chip" data-sort="team">Команда</button>
+</div>
+
+<div class="lbl">Режим</div>
+<div class="row" id="modeRow">
+  <button class="chip" data-mode="pump" aria-pressed="true">Разгон</button>
+  <button class="chip" data-mode="accel">Ускорение</button>
+  <button class="chip" data-mode="accum">Накопление</button>
+</div>
+
+<div class="lbl">Что показывать</div>
+<div class="row" id="setRow">
+  <button class="chip alt" data-set="meme" aria-pressed="true">Мемкоины</button>
+  <button class="chip alt" data-set="mine">Мои 4</button>
+  <button class="chip alt" data-set="all">Всё, что есть</button>
+  <button class="chip alt" data-set="new">🆕 Новые (&lt;24ч)</button>
+</div>
+
+<div class="lbl">Отсев</div>
+<div class="row" id="junkRow">
+  <button class="chip alt" id="junkBtn" aria-pressed="true">🧹 Прятать мусор</button>
+  <button class="chip alt" id="greenBtn">🟢 Только чистые</button>
+  <button class="chip alt" id="teamBtn">🏛 С командой</button>
+</div>
+
+<div class="lbl">Сигнал: рывок за 5 минут</div>
+<div class="row" id="trigRow">
+  <button class="chip alt" data-trig="1">от 1%</button>
+  <button class="chip alt" data-trig="2" aria-pressed="true">от 2%</button>
+  <button class="chip alt" data-trig="4">от 4%</button>
+  <button class="chip alt" data-trig="99">выключить</button>
+</div>
+
+<div id="err"></div>
+<div class="list" id="list"><div class="empty">Первые 5 минут собираю базу цен.<br>Рывки начнут появляться, как только накопится история.</div></div>
+
+<script>
+const MINE = ['SHIB','PEPE','BONK','FLOKI'];
+const MEME = ['DOGE','SHIB','PEPE','BONK','FLOKI','WIF','BOME','MEW','POPCAT','MOG','BRETT','TURBO',
+'NEIRO','PNUT','ACT','GOAT','SPX','MEME','LADYS','ELON','BABYDOGE','WEN','MYRO','SLERF','DEGEN','TOSHI',
+'HIPPO','MUMU','SUNDOG','DOGS','CAT','MOODENG','CHILLGUY','FARTCOIN','TRUMP','MELANIA','PENGU','AI16Z',
+'ZEREBRO','GIGA','BILLY','MICHI','PONKE','ANDY','RETARDIO','SNEK','AIDOGE','KISHU','LEASH','SAMO','TOSHI'];
+
+const KU = 'https://api.kucoin.com/api/v1/market/allTickers';
+const CG = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=meme-token&order=volume_desc&per_page=250&page=1&price_change_percentage=1h%2C24h%2C7d';
+const KU_CANDLES = s => `https://api.kucoin.com/api/v1/market/candles?type=1day&symbol=${s}`;
+const CG_CHART = id => `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=30&interval=daily`;
+const POLL = 20000, WINDOW = 70*60*1000;
+
+let state = {sort:'d5', set:'meme', trig:2, sound:true, mode:'pump', junk:true, green:false, team:false};
+let snaps = [], live = new Map(), openCard = null, plans = new Map(), alerted = new Set();
+let started = Date.now(), source = null, tick = 0;
+
+const fmtP = p => p >= 1 ? p.toLocaleString('en-US',{maximumFractionDigits:3}) : p.toPrecision(4).replace(/0+$/,'');
+const fmtB = n => !n ? '—' : n>=1e9 ? '$'+(n/1e9).toFixed(2)+'B' : n>=1e6 ? '$'+(n/1e6).toFixed(1)+'M' : '$'+Math.round(n/1e3)+'K';
+const pct = v => v==null ? '—' : (v>0?'+':'')+v.toFixed(2)+'%';
+function heat(v){
+  if(v==null) return '#5A6474';
+  if(v<=-5) return '#2E6FA8'; if(v<0) return '#4FA3D1';
+  if(v<0.5) return '#8C9AAE'; if(v<2) return '#F2A33C';
+  if(v<6) return '#FF5B2E'; return '#FFD9C2';
+}
+function beep(){
+  if(!state.sound) return;
+  try{
+    const c=new (window.AudioContext||window.webkitAudioContext)(), o=c.createOscillator(), g=c.createGain();
+    o.connect(g); g.connect(c.destination); o.type='triangle'; o.frequency.value=920;
+    g.gain.setValueAtTime(.001,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(.28,c.currentTime+.02);
+    g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.5);
+    o.start(); o.stop(c.currentTime+.55);
+  }catch(e){}
+}
+
+function delta(sym, mins){
+  const cut = Date.now() - mins*60000;
+  let old = null;
+  for(const s of snaps){ if(s.t <= cut) old = s; else break; }
+  if(!old) return null;
+  const was = old.p.get(sym), now = live.get(sym)?.price;
+  if(!was || !now) return null;
+  return (now/was - 1)*100;
+}
+
+const CG_LIST = 'https://api.coingecko.com/api/v3/coins/list?include_platform=true';
+const GP_CHAIN = {ethereum:'1','binance-smart-chain':'56',base:'8453','arbitrum-one':'42161',
+  'polygon-pos':'137','avalanche':'43114','optimistic-ethereum':'10'};
+let CONTRACTS = null, risk = new Map(), busy = false;
+
+async function loadContracts(){
+  if(CONTRACTS) return;
+  try{
+    const j = await (await fetch(CG_LIST)).json();
+    CONTRACTS = new Map();
+    j.forEach(c=>{
+      const pl = c.platforms || {};
+      if(pl.solana) { CONTRACTS.set(c.id, {chain:'solana', addr:pl.solana}); return; }
+      for(const k in GP_CHAIN){
+        if(pl[k]){ CONTRACTS.set(c.id, {chain:GP_CHAIN[k], addr:pl[k].toLowerCase()}); return; }
+      }
+    });
+  }catch(e){ CONTRACTS = new Map(); }
+}
+
+function grade(f){
+  const bad = [], warn = [];
+  const num = v => v==null||v==='' ? null : parseFloat(v)*100;
+  if(f.is_honeypot==='1') bad.push('продать нельзя');
+  if(f.cannot_sell_all==='1') bad.push('нельзя продать всё');
+  if(f.transfer_pausable==='1') bad.push('переводы можно остановить');
+  const st = num(f.sell_tax), bt = num(f.buy_tax);
+  if(st!=null && st>=15) bad.push('налог на продажу '+st.toFixed(0)+'%');
+  else if(st!=null && st>=5) warn.push('налог на продажу '+st.toFixed(0)+'%');
+  if(bt!=null && bt>=15) bad.push('налог на покупку '+bt.toFixed(0)+'%');
+  if(f.is_open_source==='0') warn.push('код закрыт');
+  if(f.is_mintable==='1') warn.push('можно допечатать');
+  if(f.hidden_owner==='1') bad.push('скрытый владелец');
+  if(f.can_take_back_ownership==='1') bad.push('владение можно вернуть');
+
+  const lp = f.lp_holders || [];
+  const locked = lp.reduce((a,h)=>a+(h.is_locked==1?parseFloat(h.percent||0):0),0)*100;
+  if(lp.length && locked < 50) warn.push('ликвидность не заперта ('+locked.toFixed(0)+'%)');
+
+  const hs = (f.holders||[]).filter(h=>h.is_locked!=1 && h.tag!=='burn');
+  const top = hs.slice(0,10).reduce((a,h)=>a+parseFloat(h.percent||0),0)*100;
+  if(top>=70) bad.push('топ-10 держат '+top.toFixed(0)+'%');
+  else if(top>=45) warn.push('топ-10 держат '+top.toFixed(0)+'%');
+
+  if(bad.length) return {lvl:'red', txt:bad.slice(0,3).join(' · ')};
+  if(warn.length) return {lvl:'yellow', txt:warn.slice(0,3).join(' · ')};
+  return {lvl:'green', txt:'явных ловушек в контракте нет'};
+}
+
+function gradeSol(f){
+  const bad=[], warn=[];
+  if(f.freezable && f.freezable.status==='1') bad.push('кошелёк можно заморозить');
+  if(f.mintable && f.mintable.status==='1') warn.push('можно допечатать');
+  if(f.metadata_mutable && f.metadata_mutable.status==='1') warn.push('данные токена меняются');
+  const hs = (f.holders||[]).filter(h=>!h.is_locked);
+  const top = hs.slice(0,10).reduce((a,h)=>a+parseFloat(h.percent||0),0)*100;
+  if(top>=70) bad.push('топ-10 держат '+top.toFixed(0)+'%');
+  else if(top>=45) warn.push('топ-10 держат '+top.toFixed(0)+'%');
+  if(bad.length) return {lvl:'red', txt:bad.slice(0,3).join(' · ')};
+  if(warn.length) return {lvl:'yellow', txt:warn.slice(0,3).join(' · ')};
+  return {lvl:'green', txt:'явных ловушек в контракте нет'};
+}
+
+async function checkRisk(ids){
+  if(busy) return; busy = true;
+  try{
+    await loadContracts();
+    const byChain = new Map();
+    ids.forEach(id=>{
+      if(risk.has(id)) return;
+      const c = CONTRACTS.get(id);
+      if(!c){ risk.set(id, {lvl:'gray', txt:'контракт не найден — токен только на биржах'}); return; }
+      if(!byChain.has(c.chain)) byChain.set(c.chain, []);
+      byChain.get(c.chain).push({id, addr:c.addr});
+    });
+    for(const [chain, list] of byChain){
+      for(let i=0;i<list.length;i+=15){
+        const part = list.slice(i,i+15);
+        const q = part.map(x=>x.addr).join(',');
+        const url = chain==='solana'
+          ? 'https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses='+q
+          : 'https://api.gopluslabs.io/api/v1/token_security/'+chain+'?contract_addresses='+q;
+        try{
+          const j = await (await fetch(url)).json();
+          const res = j.result || {};
+          part.forEach(x=>{
+            const f = res[x.addr] || res[Object.keys(res).find(k=>k.toLowerCase()===x.addr)||''];
+            risk.set(x.id, f ? (chain==='solana'?gradeSol(f):grade(f))
+                             : {lvl:'gray', txt:'проверка недоступна'});
+          });
+        }catch(e){ part.forEach(x=>risk.set(x.id,{lvl:'gray',txt:'проверка недоступна'})); }
+        await new Promise(r=>setTimeout(r,600));
+      }
+    }
+    render();
+  } finally { busy = false; }
+}
+
+async function fromKu(){
+  const r = await fetch(KU);
+  if(!r.ok) throw new Error('KuCoin код '+r.status);
+  const j = await r.json();
+  return j.data.ticker.filter(t=>t.symbol.endsWith('-USDT') && t.last).map(t=>({
+    sym:t.symbol, base:t.symbol.replace('-USDT',''), id:null, price:+t.last,
+    d24:(+t.changeRate||0)*100, vol:+t.volValue||0, high:+t.high||0, low:+t.low||0
+  }));
+}
+async function fromCG(){
+  const r = await fetch(CG);
+  if(!r.ok) throw new Error('CoinGecko код '+r.status);
+  const j = await r.json();
+  return j.filter(c=>c.current_price).map(c=>({
+    sym:c.symbol.toUpperCase()+'-USDT', base:c.symbol.toUpperCase(), id:c.id, price:c.current_price,
+    d24:c.price_change_percentage_24h||0, vol:c.total_volume||0, high:c.high_24h||0, low:c.low_24h||0,
+    mcap:c.market_cap||0, athDown:c.ath_change_percentage, rank:c.market_cap_rank,
+    h1:c.price_change_percentage_1h_in_currency, d7:c.price_change_percentage_7d_in_currency
+  }));
+}
+
+function fail(html){ document.getElementById('err').innerHTML = '<div class="err">'+html+'</div>'; }
+
+async function poll(){
+  if(location.protocol==='content:' || location.protocol==='file:'){
+    fail('<b>Страница открыта как файл, а не как сайт.</b><br>'+
+         'Адрес начинается на <span class="num">'+location.protocol+'//</span> — браузер запрещает таким страницам ходить в интернет, '+
+         'поэтому биржа недоступна.<br><br>Нужен обычный адрес на https. Загрузи файл на GitHub Pages и открой оттуда.');
+    return;
+  }
+  tick++;
+  if(source==='gecko' && tick % 3 !== 1) return;   // CoinGecko лимитирует, опрашиваем раз в минуту
+
+  let rows = null, errs = [];
+  if(source !== 'gecko'){
+    try{ rows = await fromKu(); source='kucoin'; }catch(e){ errs.push('KuCoin: '+e.message); }
+  }
+  if(!rows){
+    try{ rows = await fromCG(); source='gecko'; }catch(e){ errs.push('CoinGecko: '+e.message); }
+  }
+  if(!rows){
+    fail('<b>Оба источника молчат.</b><br>'+errs.join('<br>')+
+         '<br><br>Проверь интернет. Если сеть есть — биржа режет запросы из браузера, тогда нужен серверный вариант.');
+    return;
+  }
+
+  const best = new Map();
+  rows.forEach(c=>{
+    const prev = best.get(c.base);
+    if(!prev || (c.vol||0) > (prev.vol||0)) best.set(c.base, c);
+  });
+  const snap = new Map();
+  best.forEach((c,b)=>{ live.set(b, c); snap.set(b, c.price); });
+  snaps.push({t:Date.now(), p:snap});
+  while(snaps.length && snaps[0].t < Date.now()-WINDOW) snaps.shift();
+
+  document.getElementById('err').innerHTML='';
+  document.getElementById('stat').innerHTML =
+    (source==='kucoin' ? 'KuCoin' : 'CoinGecko (запасной)') +
+    ' · пар: <b>'+live.size+'</b> · <b>'+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'</b>';
+  document.getElementById('warmBar').style.width = Math.min(100,(Date.now()-started)/(5*60000)*100)+'%';
+  render();
+}
+
+
+/* Досье собрано вручную по открытым источникам, данные на август 2026.
+   tier 2 — подтверждённое юрлицо + деньги + продукт; 1 — экосистема/бренд без венчура;
+   -1 — красный флаг по инсайдерам вне зависимости от известности команды. */
+const BACKING = {
+  'pudgy-penguins': {t:2, s:'Igloo Inc. (Delaware) · раунды $9M + $11M, лид Founders Fund и 1kx · игрушки в Walmart и Target · подана заявка на спот-ETF. Инсайдеры ~29%, вестинг до 2028.'},
+  'dogecoin': {t:2, s:'Первый спот-ETF на мемкоин: DOJE запущен 18.09.2025, ~$17M в первый день. Юрлица-эмитента нет, ETF сделали сторонние управляющие.'},
+  'floki': {t:2, s:'Игра Valhalla на opBNB, FlokiFi, TokenFi · листинг на Robinhood US · ETP на бирже SIX в процессе. Команда изначально анонимная.'},
+  'bonk': {t:2, s:'BonkDAO, казна ~$124M · партнёрства в экосистеме Solana, казначейское размещение $25M. В июле 2026 DAO потеряло $20M на эксплойте.'},
+  'shiba-inu': {t:1, s:'Без венчура и без юрлица, 100% community. Своя сеть Shibarium, ShibaSwap. Основатель анонимен (Ryoshi), лид-разработчик под псевдонимом.'},
+  'toshi': {t:1, s:'Флагманский мем экосистемы Base, инкубированной Coinbase. Связь с Coinbase косвенная — это мем на их блокчейне, а не их проект.'},
+  'based-brett': {t:1, s:'Крупнейший мем на Base, IP из вселенной Boys Club Мэтта Фьюри. Листинг на Coinbase.'},
+  'official-trump': {t:-1, s:'Юрлица CIC Digital и Fight Fight Fight. НО: инсайдеры держат 67,5% предложения, ежедневный разлок идёт до 2028. FDV втрое выше капитализации — постоянный навес продавцов.'},
+  'melania-meme': {t:-1, s:'Инсайдеры контролируют ~92% предложения. Команда уже продала 82M токенов на ~$35,8M через 44 кошелька. Зафиксирован фронт-раннинг запуска на ~$99,6M.'},
+  'ai16z': {t:-1, s:'Имитировал бренд фонда a16z, по требованию переименован в ElizaOS. Идёт коллективный иск (S.D.N.Y.), в жалобе минимум 3945 пострадавших кошельков. При миграции ~40% ушло инсайдерам.'},
+  'dogwifcoin': {t:0, s:'Команды и юрлица нет. Кампания на сфере в Лас-Вегасе провалилась — площадка отрицала сделку, деньги возвращали.'},
+  'pepe': {t:0, s:'Чистый мем: анонимные создатели, без венчура, без продукта. Живёт на ликвидности и внимании.'}
+};
+
+let RAISES = null;
+async function loadRaises(){
+  if(RAISES) return;
+  RAISES = new Map();
+  try{
+    const j = await (await fetch('https://api.llama.fi/raises')).json();
+    (j.raises||[]).forEach(r=>{
+      const key = (r.name||'').toLowerCase();
+      if(!key) return;
+      const prev = RAISES.get(key);
+      if(!prev || (r.amount||0) > (prev.amount||0)) RAISES.set(key, r);
+    });
+  }catch(e){}
+}
+
+function backingLine(c){
+  const d = BACKING[c.id];
+  if(d){
+    const col = d.t===2 ? '#4FBF7F' : d.t===1 ? '#8FA3C0' : d.t===-1 ? '#FF4D4D' : '#5A6474';
+    const cap = d.t===2 ? 'КОМАНДА ПОДТВЕРЖДЕНА' : d.t===1 ? 'ЭКОСИСТЕМА' : d.t===-1 ? 'ИНСАЙДЕРЫ' : 'КОМАНДЫ НЕТ';
+    return '<div class="back" style="color:'+col+'"><span class="dot" style="background:'+col+'"></span><span><b>'+cap+'</b> · '+d.s+'</span></div>';
+  }
+  if(!RAISES) return '';
+  const r = RAISES.get((c.name||'').toLowerCase()) || RAISES.get(c.base.toLowerCase());
+  if(r){
+    const sum = r.amount ? ('$'+(r.amount>=1 ? r.amount.toFixed(1)+'M' : (r.amount*1000).toFixed(0)+'K')) : 'сумма не раскрыта';
+    const lead = (r.leadInvestors&&r.leadInvestors.length) ? ' · лид: '+r.leadInvestors.slice(0,2).join(', ') : '';
+    const yr = r.date ? new Date(r.date*1000).getFullYear() : '';
+    return '<div class="back" style="color:#4FBF7F"><span class="dot" style="background:#4FBF7F"></span><span><b>ЕСТЬ ФИНАНСИРОВАНИЕ</b> · '+sum+(yr?', '+yr:'')+lead+'</span></div>';
+  }
+  return '<div class="back"><span class="dot"></span><span>раунды и команда не найдены</span></div>';
+}
+
+function teamTier(c){
+  const d = BACKING[c.id];
+  if(d) return d.t;
+  if(RAISES && (RAISES.has((c.name||'').toLowerCase()) || RAISES.has(c.base.toLowerCase()))) return 1;
+  return 0;
+}
+function hasTeam(c){
+  const d = BACKING[c.id];
+  if(d) return d.t >= 1;
+  if(!RAISES) return false;
+  return RAISES.has((c.name||'').toLowerCase()) || RAISES.has(c.base.toLowerCase());
+}
+
+function riskLine(c){
+  const r = risk.get(c.id);
+  if(!r) return '<div class="risk" style="color:#5A6474">проверяю контракт…</div>';
+  const col = {red:'#FF4D4D', yellow:'#F2A33C', green:'#4FBF7F', gray:'#5A6474'}[r.lvl];
+  const cap = {red:'ОПАСНО', yellow:'ОСТОРОЖНО', green:'ЧИСТО', gray:'НЕИЗВЕСТНО'}[r.lvl];
+  return '<div class="risk" style="color:'+col+'"><span class="dot" style="background:'+col+'"></span><span><b>'+cap+'</b> · '+r.txt+'</span></div>';
+}
+
+
+/* Новые пулы напрямую с DEX — GeckoTerminal, бесплатный публичный API, без ключа.
+   Это НЕ то же самое, что "выросла за час": это токены младше суток, которых нет ни на одной бирже. */
+const NEW_NETS = {solana:'solana', base:'8453', eth:'1', bsc:'56'};
+const GT = net => 'https://api.geckoterminal.com/api/v2/networks/'+net+'/new_pools?page=1';
+let newPools = new Map(), newPoolsLoaded = false, newPoolsTimer = null;
+
+function ageStr(iso){
+  if(!iso) return '?';
+  const min = Math.floor((Date.now() - new Date(iso).getTime())/60000);
+  if(min < 1) return 'только что';
+  if(min < 60) return min+' мин';
+  const h = Math.floor(min/60);
+  if(h < 24) return h+'ч '+(min%60)+'м';
+  return Math.floor(h/24)+' дн';
+}
+
+async function fetchNewPools(){
+  for(const net in NEW_NETS){
+    try{
+      const j = await (await fetch(GT(net))).json();
+      const included = new Map();
+      (j.included||[]).forEach(t=>{ if(t.type==='token') included.set(t.id, t.attributes||{}); });
+      (j.data||[]).forEach(p=>{
+        const a = p.attributes||{}, rel = p.relationships||{};
+        const btId = rel.base_token && rel.base_token.data && rel.base_token.data.id;
+        const tok = btId ? included.get(btId) : null;
+        const addr = (tok && tok.address) || (btId ? btId.split('_').slice(1).join('_') : null);
+        if(!addr) return;
+        const liq = parseFloat(a.reserve_in_usd||0), vol24 = parseFloat((a.volume_usd&&a.volume_usd.h24)||0);
+        if(liq < 3000 || vol24 < 500) return;
+        const price = parseFloat(a.base_token_price_usd||0);
+        if(!price) return;
+        const pc = a.price_change_percentage||{};
+        const id = net+'_'+addr.toLowerCase();
+        newPools.set(id, {
+          id, net, addr, chain: NEW_NETS[net],
+          base: (tok&&tok.symbol) ? tok.symbol.toUpperCase() : (a.name||'?').split('/')[0].trim().toUpperCase(),
+          price, liq, vol24,
+          m5: pc.m5!=null?parseFloat(pc.m5):null, h1: pc.h1!=null?parseFloat(pc.h1):null,
+          h24: pc.h24!=null?parseFloat(pc.h24):null,
+          created: a.pool_created_at, fdv: a.fdv_usd?parseFloat(a.fdv_usd):null
+        });
+      });
+    }catch(e){}
+  }
+  newPoolsLoaded = true;
+  if(state.set==='new') render();
+}
+
+async function checkPoolRisk(items){
+  const byChain = new Map();
+  items.forEach(it=>{
+    if(risk.has(it.id)) return;
+    if(!byChain.has(it.chain)) byChain.set(it.chain, []);
+    byChain.get(it.chain).push(it);
+  });
+  for(const [chain, list] of byChain){
+    for(let i=0;i<list.length;i+=15){
+      const part = list.slice(i,i+15);
+      const q = part.map(x=>x.addr).join(',');
+      const url = chain==='solana'
+        ? 'https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses='+q
+        : 'https://api.gopluslabs.io/api/v1/token_security/'+chain+'?contract_addresses='+q;
+      try{
+        const j = await (await fetch(url)).json();
+        const res = j.result || {};
+        part.forEach(x=>{
+          const f = res[x.addr] || res[Object.keys(res).find(k=>k.toLowerCase()===x.addr.toLowerCase())||''];
+          risk.set(x.id, f ? (chain==='solana'?gradeSol(f):grade(f)) : {lvl:'gray',txt:'проверка недоступна'});
+        });
+      }catch(e){ part.forEach(x=>risk.set(x.id,{lvl:'gray',txt:'проверка недоступна'})); }
+      await new Promise(r=>setTimeout(r,600));
+    }
+  }
+  if(state.set==='new') render();
+}
+
+function renderNewPools(){
+  const el = document.getElementById('list');
+  const banner = '<div class="warnbar">⚠ Пулы младше суток на Solana/Base/ETH/BSC — их нет на KuCoin, купить можно только через DEX-кошелёк (Phantom, MetaMask). Подавляющее большинство таких токенов — мёртвые или скам. Смотри строку проверки контракта под каждой карточкой, не только цену.</div>';
+  if(!newPoolsLoaded){ el.innerHTML = banner+'<div class="empty">Собираю свежие пулы с четырёх сетей, первая загрузка — до минуты…</div>'; return; }
+  let arr = [...newPools.values()];
+  if(state.green) arr = arr.filter(c=>{ const r=risk.get(c.id); return r && r.lvl==='green'; });
+  const k = {d5:c=>c.m5??-999, d15:c=>c.h1??-999, d60:c=>c.h1??-999, d24:c=>c.h24??-999, vol:c=>c.vol24}[state.sort] || (c=>c.h24??-999);
+  arr.sort((a,b)=>k(b)-k(a));
+  arr = arr.slice(0,40);
+  if(!arr.length){
+    el.innerHTML = banner+'<div class="empty">'+(state.green?'Чистых новых пулов сейчас нет.':'После фильтра по ликвидности ничего не осталось — подожди следующего обновления.')+'</div>';
+    return;
+  }
+  el.innerHTML = banner + arr.map(c=>{
+    return '<div class="card">'
+      +'<div class="top"><span class="tick">'+c.base+'</span>'
+      +'<span style="font-size:10px;color:var(--dim);margin-left:2px">· '+c.net+' · '+ageStr(c.created)+'</span>'
+      +'<span class="price num" style="margin-left:auto">$'+fmtP(c.price)+'</span></div>'
+      +'<div class="mid">'
+      +'<div class="tf"><div class="k">5 МИН</div><div class="v num" style="color:'+heat(c.m5)+'">'+pct(c.m5)+'</div></div>'
+      +'<div class="tf"><div class="k">1 ЧАС</div><div class="v num" style="color:'+heat(c.h1)+'">'+pct(c.h1)+'</div></div>'
+      +'<div class="tf"><div class="k">24 Ч</div><div class="v num" style="color:'+heat(c.h24)+'">'+pct(c.h24)+'</div></div>'
+      +'<div class="meta">ликвидность '+fmtB(c.liq)+'<br>объём 24ч '+fmtB(c.vol24)+(c.fdv?('<br>FDV '+fmtB(c.fdv)):'')+'</div>'
+      +'</div>'+riskLine(c)+backingLine(c)+'</div>';
+  }).join('');
+
+  const need = arr.filter(c=>!risk.has(c.id)).map(c=>({id:c.id, chain:c.chain, addr:c.addr}));
+  if(need.length) checkPoolRisk(need);
+}
+
+function render(){
+  if(state.set==='new'){ renderNewPools(); return; }
+  let arr = [...live.values()];
+  if(state.set==='mine') arr = arr.filter(c=>MINE.includes(c.base));
+  else if(state.set==='meme') arr = arr.filter(c=>MEME.includes(c.base));
+  else arr = arr.filter(c=>c.vol >= 200000);
+
+  arr.forEach(c=>{
+    c.turn = (c.mcap && c.vol) ? c.vol/c.mcap*100 : 0;
+    const avgHour = (c.d24||0)/24;
+    c.accel = (avgHour > 0 && c.h1 != null) ? c.h1/avgHour : null;
+  });
+
+  if(state.junk && state.set!=='mine'){
+    arr = arr.filter(c=>
+      (c.vol||0) >= 200000 &&
+      (c.mcap||0) >= 1500000 &&
+      !(c.athDown!=null && c.athDown < -90) &&
+      !(c.turn > 400)
+    );
+  }
+
+  if(state.mode==='accel'){
+    arr = arr.filter(c=> c.h1!=null && c.h1 >= 1 && (c.d24||0) > 0 && c.accel!=null && c.accel >= 2);
+  }
+  if(state.mode==='accum'){
+    arr = arr.filter(c=> c.turn >= 20 && Math.abs(c.d24||0) <= 7);
+  }
+
+  arr.forEach(c=>{ c.d5=delta(c.base,5); c.d15=delta(c.base,15); c.d60=delta(c.base,60); });
+
+  const k = state.mode==='accum' ? (c=>c.turn)
+    : state.mode==='accel' ? (c=>c.accel||0)
+    : {d5:c=>c.d5??-999, d15:c=>c.d15??-999, d60:c=>c.d60??-999, d24:c=>c.d24, vol:c=>c.vol, team:c=>teamTier(c)+(c.vol||0)/1e12}[state.sort];
+  arr.sort((a,b)=>k(b)-k(a));
+  arr = arr.slice(0,50);
+
+  const need = arr.map(c=>c.id).filter(id=>id && !risk.has(id)).slice(0,45);
+  if(need.length) checkRisk(need);
+
+  if(state.green) arr = arr.filter(c=>{ const r=risk.get(c.id); return r && r.lvl==='green'; });
+  if(state.team) arr = arr.filter(hasTeam);
+
+  const fresh = [];
+  arr.forEach(c=>{
+    const hit = c.d5!=null && c.d5>=state.trig && c.vol>=300000;
+    c.hot = hit;
+    if(hit && !alerted.has(c.base)){ fresh.push(c.base); alerted.add(c.base); }
+    if(!hit && c.d5!=null && c.d5 < state.trig*0.5) alerted.delete(c.base);
+  });
+  if(fresh.length) beep();
+
+  const el = document.getElementById('list');
+  if(!arr.length){
+    el.innerHTML = state.green
+      ? '<div class="empty">Чистых пока нет.<br>Проверка контрактов ещё идёт — подожди полминуты.<br>Если так и останется пусто, значит в этом режиме все с замечаниями.</div>'
+      : '<div class="empty">Пусто под этот фильтр.</div>';
+    return;
+  }
+
+  el.innerHTML = arr.map(c=>{
+    const plan = openCard===c.base ? (plans.get(c.base) || '<div class="plan">считаю уровни…</div>') : '';
+    return `<div class="card ${fresh.includes(c.base)?'flash':''}" data-b="${c.base}">
+      ${c.hot?'<div class="badge">РЫВОК</div>':''}
+      <div class="top">
+        <span class="tick">${c.base}</span>${MINE.includes(c.base)?'<span class="pin">★</span>':''}
+        <span class="price num" style="margin-right:${c.hot?'58px':'0'}">$${fmtP(c.price)}</span>
+      </div>
+      <div class="mid">
+        <div class="tf"><div class="k">5 МИН</div><div class="v num" style="color:${heat(c.d5)}">${pct(c.d5)}</div></div>
+        <div class="tf"><div class="k">1 ЧАС</div><div class="v num" style="color:${heat(c.h1)}">${pct(c.h1)}</div></div>
+        <div class="tf"><div class="k">24 Ч</div><div class="v num" style="color:${heat(c.d24)}">${pct(c.d24)}</div></div>
+        <div class="meta">оборот ${fmtB(c.vol)}<br>капа ${fmtB(c.mcap)} · <span style="color:${c.turn>=20?'#F2A33C':'#7C8798'}">${(c.turn||0).toFixed(0)}%</span><br>${c.accel!=null&&c.accel>=2?('<span style="color:#FF5B2E">разгон ×'+c.accel.toFixed(1)+'</span>'):(c.athDown!=null?('от пика '+c.athDown.toFixed(0)+'%'):'')}</div>
+      </div>
+      ${riskLine(c)}
+      ${backingLine(c)}
+      ${plan}
+    </div>`;
+  }).join('');
+}
+
+/* тап по карточке → дневной ATR и уровни по схеме TP 4 ATR / SL 1 ATR */
+document.getElementById('list').addEventListener('click', async e=>{
+  const card = e.target.closest('.card'); if(!card) return;
+  const b = card.dataset.b;
+  if(openCard===b){ openCard=null; render(); return; }
+  openCard=b;
+  if(plans.has(b)){ render(); return; }
+  render();
+  try{
+    const c = live.get(b);
+    let atr, label;
+    if(source==='kucoin'){
+      const j = await (await fetch(KU_CANDLES(c.sym))).json();
+      const rows = j.data.slice(0,20).reverse().map(x=>({c:+x[2],h:+x[3],l:+x[4]}));
+      let trs=[];
+      for(let i=1;i<rows.length;i++){
+        const p=rows[i-1].c, x=rows[i];
+        trs.push(Math.max(x.h-x.l, Math.abs(x.h-p), Math.abs(x.l-p)));
+      }
+      atr = trs.slice(-14).reduce((a,v)=>a+v,0)/Math.min(14,trs.length);
+      label = 'ATR дневной';
+    } else {
+      const j = await (await fetch(CG_CHART(c.id))).json();
+      const px = j.prices.map(p=>p[1]);
+      let d=[]; for(let i=1;i<px.length;i++) d.push(Math.abs(px[i]-px[i-1]));
+      atr = d.slice(-14).reduce((a,v)=>a+v,0)/Math.min(14,d.length);
+      label = 'Волатильность за день';
+    }
+    const P = c.price;
+    plans.set(b, `<div class="plan">
+      <div class="g"><span>${label}</span><span class="num">$${fmtP(atr)} · ${(atr/P*100).toFixed(1)}%</span></div>
+      <div class="g"><span>Стоп −1 ATR</span><span class="num" style="color:#4FA3D1">$${fmtP(P-atr)}</span></div>
+      <div class="g"><span>Цель +4 ATR</span><span class="num" style="color:#FF5B2E">$${fmtP(P+4*atr)}</span></div>
+      <div class="g"><span>Держать</span><span>8–16 дней</span></div>
+      <div class="hint">Уровни с дневного таймфрейма. Комиссия 0,1% на вход и 0,1% на выход: на дневной цели это шум, на пятиминутном рывке это половина движения.</div>
+    </div>`);
+  }catch(err){
+    plans.set(b, '<div class="plan"><div class="hint">Свечи не пришли, уровни посчитать не смог.</div></div>');
+  }
+  render();
+});
+
+function bind(id,attr,cb){
+  document.getElementById(id).addEventListener('click',e=>{
+    const b=e.target.closest('.chip'); if(!b) return;
+    [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); cb(b.dataset[attr]);
+  });
+}
+bind('sortRow','sort',v=>{state.sort=v;render()});
+bind('modeRow','mode',v=>{state.mode=v;render()});
+document.getElementById('greenBtn').addEventListener('click',e=>{
+  state.green=!state.green; e.target.setAttribute('aria-pressed',state.green); render();
+});
+document.getElementById('teamBtn').addEventListener('click',e=>{
+  state.team=!state.team; e.target.setAttribute('aria-pressed',state.team); render();
+});
+document.getElementById('junkBtn').addEventListener('click',e=>{
+  state.junk=!state.junk; e.target.setAttribute('aria-pressed',state.junk); render();
+});
+document.getElementById('setRow').addEventListener('click', e=>{
+  const b = e.target.closest('.chip'); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true');
+  state.set = b.dataset.set;
+  if(state.set==='new'){
+    if(!newPoolsTimer){ fetchNewPools(); newPoolsTimer=setInterval(fetchNewPools,45000); }
+  } else if(newPoolsTimer){ clearInterval(newPoolsTimer); newPoolsTimer=null; }
+  render();
+});
+bind('trigRow','trig',v=>{state.trig=+v;alerted.clear();render()});
+document.getElementById('soundBtn').addEventListener('click',e=>{
+  state.sound=!state.sound; e.target.textContent = state.sound?'🔔 вкл':'🔕 выкл';
+});
+
+loadRaises().then(render);
+poll(); setInterval(poll, POLL);
+</script>
+</body>
+</html>
