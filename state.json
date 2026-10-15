@@ -1,6 +1,6 @@
 {
   "BTC-USD": 0,
-  "ETH-USD": 0,
+  "ETH-USD": 3,
   "SOL-USD": 3,
   "XRP-USD": 3,
   "DOGE-USD": 3,
@@ -8,13 +8,13 @@
   "MSFT": 2,
   "NVDA": 2,
   "TSLA": 1,
-  "INTC": 1,
+  "INTC": 0,
   "PYPL": 0,
   "DIS": 2,
   "SPY": 2,
   "QQQ": 2,
   "005930.KS": 0,
-  "000660.KS": 0,
+  "000660.KS": 3,
   "000270.KS": 0,
   "035420.KS": 0,
   "035720.KS": 3
